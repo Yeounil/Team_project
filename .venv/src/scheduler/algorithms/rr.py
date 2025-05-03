@@ -31,6 +31,3 @@ class RoundRobin:
                         process['arrival_time'] = core.available_at
                         queue.append(process)
             time += 1
-                        # 아직 남은 시간 있으면 다시 큐에 넣음
-                        process['arrival_time'] = time
-                        queue.append(process)
