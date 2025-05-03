@@ -1,5 +1,5 @@
 class Core:
-    def __init__(self, core_id,core_type):
+    def __init__(self, core_id, core_type):
         self.core_id = core_id
         self.current_process = None
         self.timeline = []  # (start_time, pid)
