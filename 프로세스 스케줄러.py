@@ -11,23 +11,25 @@ class Process:
         this.turnaround = 0
         this.normalized_tt = 0
 
+
 class Core:
-    def __init__(this, core_id, core_type):
-        this.id = core_id
-        this.type = core_type  # 'P' or 'E'
-        this.busy = False
-        this.current_proc = None
-        this.run_time = 0
-        this.power_used = 0
+    def __init__(self, cid, core_type):
+        self.cid = cid  # 코어 번호
+        self.core_type = core_type  # 'P' 또는 'E'
+        self.is_idle = True  # 현재 유휴상태 여부
+        self.current_process = None  # 현재 할당된 프로세스
+        self.used_time = 0  # 사용 시간
+        self.startup_count = 0  # 시동 횟수
+        self.last_used = -1  # 마지막 사용 시점 -> 마지막 사용시점으로부터 몇초가 지나면 다시 idle(절전)상태로 진입할지 기준 결정 필요한가?
+
         if core_type == 'P':
-            this.performance = 2
-            this.power_rate = 3
-            this.startup_power = 0.5
+            self.performance = 2
+            self.power_rate = 3
+            self.startup_power = 0.5
         else:
-            this.performance = 1
-            this.power_rate = 1
-            this.startup_power = 0.1
-        this.was_idle = True  # 시동 전력 계산용
+            self.performance = 1
+            self.power_rate = 1
+            self.startup_power = 0.1
 
 class ProcessScheduler:
     def __init__(this, processes, cores, algorithm, time_quantum=None):
