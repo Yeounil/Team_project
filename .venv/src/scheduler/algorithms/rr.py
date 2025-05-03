@@ -5,20 +5,23 @@ class RoundRobinScheduler:
         self.time_quantum = time_quantum
         self.total_power = 0
 
-    def schedule(self, ready_queue, cores):
+    def schedule(self, ready_queue, pcores, ecores):
         time = 0
         process_queue = deque(sorted(ready_queue, key=lambda p: p.arrival_time))
         waiting_queue = deque()
         finished = set()
-        quantum_counter = {core.core_id: 0 for core in cores}
+        all_cores = pcores + ecores
+        quantum_counter = {core.core_id: 0 for core in all_cores}
+
         while process_queue and process_queue[0].arrival_time > time:
-            for core in cores:
+            for core in all_cores:
                 core.timeline.append((time, 'idle'))
             time += 1
+
         while len(finished) < len(ready_queue):
             while process_queue and process_queue[0].arrival_time <= time:
                 waiting_queue.append(process_queue.popleft())
-            for core in cores:
+            for core in all_cores:
                 if core.current_process is None and waiting_queue:
                     proc = waiting_queue.popleft()
                     core.current_process = proc
@@ -29,12 +32,12 @@ class RoundRobinScheduler:
                         self.total_power += core.startup_power
                         core.startup_count += 1
                         core.is_idle = False
-            for core in cores:
+            for core in all_cores:
                 proc = core.current_process
                 if proc is not None:
                     work = min(core.performance, proc.remaining_time)
                     proc.remaining_time -= work
-                    core.used_time += 1
+                    core.used_time = getattr(core, 'used_time', 0) + 1
                     quantum_counter[core.core_id] += 1
                     self.total_power += core.power_rate
                     core.timeline.append((time, proc.pid))
@@ -57,10 +60,10 @@ class RoundRobinScheduler:
                     core.timeline.append((time, 'idle'))
                     core.is_idle = True
             time += 1
-            if all(core.current_process is None for core in cores) and not waiting_queue and process_queue:
+            if all(core.current_process is None for core in all_cores) and not waiting_queue and process_queue:
                 next_arrival = process_queue[0].arrival_time
                 while time < next_arrival:
-                    for core in cores:
+                    for core in all_cores:
                         core.timeline.append((time, 'idle'))
                     time += 1
                 continue
