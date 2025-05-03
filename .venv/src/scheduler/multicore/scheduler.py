@@ -3,6 +3,7 @@ class Core:
         self.core_id = core_id
         self.current_process = None
         self.timeline = []  # (start_time, pid)
+        self.next_free_time = 0
 
 
 class MultiCoreScheduler:
