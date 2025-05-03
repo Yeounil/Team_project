@@ -8,7 +8,6 @@ class Core:
         self.is_idle = True  # 현재 유휴상태 여부
         self.used_time = 0  # 사용 시간
         self.startup_count = 0  # 시동 횟수
-        self.last_used = -1  # 마지막 사용 시점 -> 마지막 사용시점으로부터 몇초가 지나면 다시 idle(절전)상태로 진입할지 기준 결정 필요한가?
 
         if core_type == 'P':
             self.performance = 2
