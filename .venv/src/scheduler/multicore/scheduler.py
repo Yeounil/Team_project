@@ -2,11 +2,11 @@ class Core:
     def __init__(self, core_id, core_type):
         self.core_id = core_id
         self.current_process = None
-        self.timeline = []  # (start_time, pid)
+        self.timeline = []  # (start_time, pid, duration)
         self.next_free_time = 0 # 현재 작업이 끝나는 시간
         self.core_type = core_type  # 'P' 또는 'E'
         self.is_idle = True  # 현재 유휴상태 여부
-        self.used_time = 0  # 사용 시간
+        self.total_power = 0  # 총 파워
         self.startup_count = 0  # 시동 횟수
 
         if core_type == 'P':
