@@ -20,7 +20,8 @@ class Core:
 
 class MultiCoreScheduler:
     def __init__(self, core_count, scheduler):
-        self.cores = [Core(i) for i in range(core_count)]
+        self.pcores = [Core(i,'P') for i in range(core_count)]
+        self.ecores = [Core(3-i, 'E') for i in range(core_count)]
         self.scheduler = scheduler
         self.processes = []
 
@@ -29,10 +30,10 @@ class MultiCoreScheduler:
 
     def run(self):
         ready_queue = self.processes.copy()
-        self.scheduler.schedule(ready_queue, self.cores)
+        self.scheduler.schedule(ready_queue, self.pcores, self.ecores)
 
     def get_results(self):
         output = ""
-        for core in self.cores:
+        for core in self.pcores:
             output += f"Core {core.core_id}: {core.timeline}\n"
         return output
