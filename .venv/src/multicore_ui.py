@@ -129,15 +129,18 @@ class SchedulerUI(QWidget):
         multicore_scheduler.run()
 
         timelines = multicore_scheduler.get_timelines()
+        core_types = multicore_scheduler.get_core_types()
         print("🟩 get_timelines 결과:", timelines)
+        print("🟩 get_core_types 결과:", core_types)
 
-        self.plot_gantt_chart(timelines)
+        self.plot_gantt_chart(timelines, core_types)
 
-    def plot_gantt_chart(self, timelines):
+    def plot_gantt_chart(self, timelines, core_types):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
+        core_info = list(zip(core_types, timelines))
 
-        draw_gantt_chart(ax, timelines)
+        draw_gantt_chart(ax, core_info)
 
         self.canvas.draw()
 
