@@ -1,3 +1,5 @@
+from scheduler import process
+
 class Core:
     def __init__(self, core_id, core_type):
         self.core_id = core_id
@@ -34,6 +36,9 @@ class MultiCoreScheduler:
 
     def get_results(self):
         output = ""
-        for core in self.pcores:
+        for core in self.pcores + self.ecores:
             output += f"Core {core.core_id}: {core.timeline}\n"
         return output
+
+    def get_timelines(self):
+        return [core.timeline for core in self.pcores + self.ecores]
