@@ -28,6 +28,7 @@ class RoundRobin:
                         self.total_power += core.startup_power
                         core.startup_count += 1
                         core.is_idle = False
+            did_work = False
             for core in all_cores:
                 proc = core.current_process
                 if proc is not None:
@@ -35,7 +36,8 @@ class RoundRobin:
                     proc.remaining_time -= work
                     quantum_counter[core.core_id] += 1
                     self.total_power += core.power_rate
-                    core.timeline.append((time, proc.pid))
+                    core.timeline.append((time, proc.pid, 1))
+                    did_work = True
                     if proc.remaining_time <= 0:
                         proc.finish_time = time + 1
                         proc.turn_around_time = proc.finish_time - proc.arrival_time
@@ -52,6 +54,7 @@ class RoundRobin:
                         quantum_counter[core.core_id] = 0
                         core.is_idle = True
             time += 1
-            if all(core.is_idle for core in all_cores) and not waiting_queue and process_queue:
+            # 아무 일도 안 한 경우(모든 코어가 idle)에는 time을 다음 프로세스 도착 시각으로 점프
+            if not did_work and not waiting_queue and process_queue:
                 next_arrival = process_queue[0].arrival_time
                 time = next_arrival
