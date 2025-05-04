@@ -48,3 +48,4 @@ class FCFS:
                 core.total_power += core.power_rate * duration
 
                 core.timeline.append((process.start_time, process.pid, duration))
+                core.next_free_time = process.finish_time # next_free_time 갱신 필요? 🚩
