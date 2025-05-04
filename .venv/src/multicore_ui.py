@@ -8,6 +8,7 @@ from matplotlib.figure import Figure
 from scheduler.factory import create_scheduler
 from scheduler.multicore.scheduler import MultiCoreScheduler
 from visualizer.gantt_chart import draw_gantt_chart
+from scheduler.process import Process
 
 class SchedulerUI(QWidget):
     def __init__(self):
@@ -33,7 +34,7 @@ class SchedulerUI(QWidget):
 
         self.algo_label = QLabel("스케줄링 알고리즘:")
         self.algo_choice = QComboBox()
-        self.algo_choice.addItems(["FCFS", "SJF", "Priority", "RR", "SPN", "SRTN"])
+        self.algo_choice.addItems(["FCFS", "HRRN", "Priority", "RR", "SPN", "SRTN"])
 
         self.quantum_label = QLabel("Round Robin Quantum (RR 선택 시):")
         self.quantum_input = QSpinBox()
@@ -82,40 +83,61 @@ class SchedulerUI(QWidget):
         self.table.insertRow(row)
 
     def run_simulation(self):
-        total_cores = self.pcore_input.value() + self.ecore_input.value()
+        print("▶ run_simulation() 호출됨")  # 1단계: 함수 진입 확인
+
+        pcore_count = self.pcore_input.value()
+        ecore_count = self.ecore_input.value()
+        total_cores = pcore_count + ecore_count
+
+        print(f"▶ 선택된 코어: P={pcore_count}, E={ecore_count}")  # 2단계: 코어 수 확인
+
         if total_cores == 0:
             print("❗ 최소 1개 이상의 코어를 선택해야 합니다.")
             return
 
         algorithm_name = self.algo_choice.currentText()
         quantum = self.quantum_input.value() if algorithm_name == "RR" else None
+        print(f"▶ 알고리즘: {algorithm_name}, Quantum: {quantum}")  # 3단계: 알고리즘 확인
 
         processes = []
         for row in range(self.table.rowCount()):
-            pid = int(self.table.item(row, 0).text())
-            arrival = int(self.table.item(row, 1).text())
-            burst = int(self.table.item(row, 2).text())
-            processes.append({"pid": pid, "arrival_time": arrival, "burst_time": burst})
+            try:
+                pid_item = self.table.item(row, 0)
+                arrival_item = self.table.item(row, 1)
+                burst_item = self.table.item(row, 2)
+
+                if not pid_item or not arrival_item or not burst_item:
+                    print(f"❗ Row {row}에 빈 셀이 있음")
+                    continue
+
+                pid = int(pid_item.text())
+                arrival = int(arrival_item.text())
+                burst = int(burst_item.text())
+
+                print(f"✅ Process 추가됨: PID={pid}, arrival={arrival}, burst={burst}")
+                processes.append(Process(pid, arrival, burst))
+
+            except Exception as e:
+                print(f"❗ 프로세스 생성 중 오류 발생 (row={row}): {e}")
+                return
 
         scheduler_algo = create_scheduler(algorithm_name, quantum)
-        multicore_scheduler = MultiCoreScheduler(total_cores, scheduler_algo)
+        print("✅ 스케줄러 생성 완료")
 
+        multicore_scheduler = MultiCoreScheduler(total_cores, scheduler_algo)
         multicore_scheduler.load_processes(processes)
         multicore_scheduler.run()
 
         timelines = multicore_scheduler.get_timelines()
+        print("🟩 get_timelines 결과:", timelines)
+
         self.plot_gantt_chart(timelines)
 
     def plot_gantt_chart(self, timelines):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
 
-        combined_timeline = []
-        for core_timeline in timelines:
-            combined_timeline.extend(core_timeline)
-        combined_timeline.sort()
-
-        draw_gantt_chart(ax, combined_timeline)
+        draw_gantt_chart(ax, timelines)
 
         self.canvas.draw()
 
