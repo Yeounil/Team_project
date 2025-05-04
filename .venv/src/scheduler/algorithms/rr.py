@@ -13,8 +13,6 @@ class RoundRobin:
         finished = set()
         quantum_counter = {core.core_id: 0 for core in all_cores}
         while process_queue and process_queue[0].arrival_time > time:
-            for core in all_cores:
-                core.timeline.append((time, 'idle'))
             time += 1
         while len(finished) < len(ready_queue):
             while process_queue and process_queue[0].arrival_time <= time:
@@ -53,13 +51,7 @@ class RoundRobin:
                         core.current_process = None
                         quantum_counter[core.core_id] = 0
                         core.is_idle = True
-                else:
-                    core.timeline.append((time, 'idle'))
-                    core.is_idle = True
             time += 1
             if all(core.is_idle for core in all_cores) and not waiting_queue and process_queue:
                 next_arrival = process_queue[0].arrival_time
-                while time < next_arrival:
-                    for core in all_cores:
-                        core.timeline.append((time, 'idle'))
-                    time += 1
+                time = next_arrival
