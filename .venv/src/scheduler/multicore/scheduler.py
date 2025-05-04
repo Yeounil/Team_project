@@ -21,9 +21,9 @@ class Core:
             self.startup_power = 0.1
 
 class MultiCoreScheduler:
-    def __init__(self, core_count, scheduler):
-        self.pcores = [Core(i,'P') for i in range(core_count)]
-        self.ecores = [Core(3-i, 'E') for i in range(core_count)]
+    def __init__(self, pcore_count, ecore_count, scheduler):
+        self.pcores = [Core(i,'P') for i in range(pcore_count)]
+        self.ecores = [Core(i+pcore_count, 'E') for i in range(ecore_count)]
         self.scheduler = scheduler
         self.processes = []
 
