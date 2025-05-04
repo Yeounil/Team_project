@@ -9,3 +9,4 @@ class Process:
         self.waiting_time = 0  # 대기시간
         self.turn_around_time = 0  # 반환시간
         self.normalized_TT = 0  # NTT
+        self.executed = 0 # 프로세스 실행 여부
