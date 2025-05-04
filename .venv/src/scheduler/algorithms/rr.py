@@ -3,20 +3,21 @@ from collections import deque
 class RoundRobin:
     def __init__(self, time_quantum):
         self.time_quantum = time_quantum
-        self.total_power = 0
 
     def schedule(self, ready_queue, pcores, ecores):
         time = 0
         all_cores = pcores + ecores
-        process_queue = deque(sorted(ready_queue, key=lambda p: p.arrival_time))
+        process_queue = deque(sorted(ready_queue, key=lambda p: (p.arrival_time, p.pid)))
         waiting_queue = deque()
         finished = set()
         quantum_counter = {core.core_id: 0 for core in all_cores}
-        while process_queue and process_queue[0].arrival_time > time:
-            time += 1
+
+   
         while len(finished) < len(ready_queue):
             while process_queue and process_queue[0].arrival_time <= time:
                 waiting_queue.append(process_queue.popleft())
+
+            
             for core in all_cores:
                 if core.current_process is None and waiting_queue:
                     proc = waiting_queue.popleft()
@@ -25,19 +26,22 @@ class RoundRobin:
                     if proc.start_time is None:
                         proc.start_time = time
                     if core.is_idle:
-                        self.total_power += core.startup_power
+                        core.total_power += core.startup_power
                         core.startup_count += 1
                         core.is_idle = False
+
             did_work = False
             for core in all_cores:
                 proc = core.current_process
                 if proc is not None:
+                   
                     work = min(core.performance, proc.remaining_time)
                     proc.remaining_time -= work
                     quantum_counter[core.core_id] += 1
-                    self.total_power += core.power_rate
+                    core.total_power += core.power_rate
                     core.timeline.append((time, proc.pid, 1))
                     did_work = True
+
                     if proc.remaining_time <= 0:
                         proc.finish_time = time + 1
                         proc.turn_around_time = proc.finish_time - proc.arrival_time
@@ -47,14 +51,17 @@ class RoundRobin:
                         core.current_process = None
                         quantum_counter[core.core_id] = 0
                         core.is_idle = True
+
+                    
                     elif quantum_counter[core.core_id] == self.time_quantum:
                         proc.arrival_time = time + 1
                         waiting_queue.append(proc)
                         core.current_process = None
                         quantum_counter[core.core_id] = 0
                         core.is_idle = True
+
             time += 1
-            # 아무 일도 안 한 경우(모든 코어가 idle)에는 time을 다음 프로세스 도착 시각으로 점프
+
             if not did_work and not waiting_queue and process_queue:
                 next_arrival = process_queue[0].arrival_time
                 time = next_arrival
