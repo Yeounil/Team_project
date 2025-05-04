@@ -124,7 +124,7 @@ class SchedulerUI(QWidget):
         scheduler_algo = create_scheduler(algorithm_name, quantum)
         print("✅ 스케줄러 생성 완료")
 
-        multicore_scheduler = MultiCoreScheduler(total_cores, scheduler_algo)
+        multicore_scheduler = MultiCoreScheduler(pcore_count, ecore_count, scheduler_algo)
         multicore_scheduler.load_processes(processes)
         multicore_scheduler.run()
 
