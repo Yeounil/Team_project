@@ -3,56 +3,63 @@ from scheduler.process import Process
 from scheduler.multicore.scheduler import Core
 
 class HRRN:
-
     def schedule(self, ready_queue, pcores, ecores):
-        # P와E 코어를 합쳐서 관리
+        # 모든 코어를 하나의 리스트로 합쳐 관리
         cores = pcores + ecores
         time = 0
-        
-        while ready_queue:
-            # 다음 도착할 프로세스 중 가장 빠른 도착 시간
-            next_arrival = min(p.arrival_time for p in ready_queue)
-            # 모든 코어 중 가장 빠르게 일을 끝내는 시간
-            next_free = min(c.next_free_time for c in cores)
 
-            # 현재 시간에 도착한 프로세스 선택
-            arrived = [p for p in ready_queue if p.arrival_time <= time]
-            # 현재 시간에 사용 가능한 코어들만 선택
-            free_cores = [c for c in cores if c.next_free_time <= time]
+        # 각 프로세스에 executed 플래그 초기화
+        for proc in ready_queue:
+            proc.executed = False
 
-            # 도착한 게 없거나 코어가 전부 사용 중이면 다음 프로세스 도착이나 코어 해제 시간으로 점프
-            if not arrived or not free_cores:
-                # 두 값 중 더 빠른 값으로 시간 이동
-                time = min(next_arrival, next_free)
-                continue
-            # 응답비율 계산 후 높은 순으로 정렬
-            arrived.sort(key=lambda p: ((time - p.arrival_time) + p.burst_time) / p.burst_time, reverse=True)
+        # 프로세스가 모두 실행될 때까지 반복
+        while not all(p.executed for p in ready_queue):
+            assigned = False
 
-            for core in free_cores:
-                if not arrived:
+            # 1) 현재 시각까지 도착했으나 미실행된 작업 수집
+            available = [p for p in ready_queue
+                         if p.arrival_time <= time and not p.executed]
+
+            # 2) 각 작업의 응답비율 계산
+            for proc in available:
+                wait = time - proc.arrival_time
+                proc.response_ratio = (wait + proc.burst_time) / proc.burst_time
+
+            # 3) 응답비율 높은 순으로 정렬
+            available.sort(key=lambda p: p.response_ratio, reverse=True)
+
+            # 4) 여유(core.next_free_time <= time) 코어마다 작업 할당
+            for core in cores:
+                if not available:
                     break
-                # 가장 높은 응답비율을 가진 프로세스 ready_queue에서 꺼냄
-                proc = arrived.pop(0)
-                ready_queue.remove(proc)
-                start = time
-                # 실행시간 = ceil(burst_time / 성능) // ceil은 ()안에 계산한 값 소수점을 반올림하는 함수
-                duration = math.ceil(proc.burst_time / core.performance)
+                if core.next_free_time <= time:
+                    # 가장 높은 비율의 프로세스 선택
+                    proc = available.pop(0)
+                    proc.executed = True
+                    assigned = True
 
-                # 시동 전력 처리
-                # 코어가 놀고 있다면 시동 전력 추가
-                if core.next_free_time < start:
-                    core.total_power += core.startup_power
+                    # 실행시간 = ceil(서비스시간 / 성능)
+                    duration = math.ceil(proc.burst_time / core.performance)
 
-                # 실행 전력 처리 (power_rate * duration)
-                core.total_power += core.power_rate * duration
+                    # 시동 전력 필요 시 추가
+                    if core.next_free_time < time:
+                        core.total_power += core.startup_power
 
-                finish = start + duration
-                # 코어 상태를 아무것도 안하고 있는 상태로 갱신
-                core.next_free_time = finish
-                core.timeline.append((start, proc.pid, duration))
+                    # 실행 전력 누적
+                    core.total_power += core.power_rate * duration
 
-                proc.start_time = start
-                proc.finish_time = finish
-                proc.waiting_time = start - proc.arrival_time
-                proc.turn_around_time = finish - proc.arrival_time
-                proc.normalized_TT = proc.turn_around_time / proc.burst_time
+                    # 스케줄 기록
+                    start = time
+                    finish = start + duration
+                    core.timeline.append((start, proc.pid, duration))
+                    core.next_free_time = finish
+
+                    # 메트릭 기록
+                    proc.start_time        = start
+                    proc.finish_time       = finish
+                    proc.waiting_time      = start - proc.arrival_time
+                    proc.turn_around_time  = finish - proc.arrival_time
+                    proc.normalized_TT     = proc.turn_around_time / proc.burst_time
+
+            if not assigned:
+                time += 1
