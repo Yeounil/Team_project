@@ -22,14 +22,13 @@ class RoundRobin:
         process_queue = sorted(ready_queue, key=lambda p: (p.arrival_time, p.pid))
 
         while not all(p.executed for p in ready_queue):
-            # 현재 시간에 도착한 프로세스 추가
+  
             for p in process_queue:
                 if p.arrival_time == time and p not in arrived and not p.executed:
                     arrived.append(p)
 
             assigned_pid = set()
 
-            # 타임슬라이스 만료/종료 처리
             for i, core in enumerate(all_cores):
                 proc = running[i]
                 if proc:
@@ -46,7 +45,6 @@ class RoundRobin:
                         running[i] = None
                         quantum_counter[i] = 0
 
-            # 할당
             for i, core in enumerate(all_cores):
                 if running[i] is None:
                     candidates = [p for p in arrived if not p.executed and p not in running and p.pid not in assigned_pid and p.remaining_time > 0]
@@ -65,7 +63,6 @@ class RoundRobin:
                         core.startup_count += 1
                     core.is_idle = False
 
-            # 실행
             for i, core in enumerate(all_cores):
                 proc = running[i]
                 if proc:
@@ -75,20 +72,17 @@ class RoundRobin:
                     core.total_power += core.power_rate
                     core.timeline.append((time, proc.pid, 1))
 
-            # 유휴 처리
             for i, core in enumerate(all_cores):
                 if running[i] is None and not core.is_idle:
                     core.is_idle = True
 
             time += 1
 
-            # 아무 일도 안 한 경우 다음 프로세스 도착까지 점프
             if all(core.is_idle for core in all_cores) and not any(p for p in arrived if not p.executed and p.remaining_time > 0):
                 next_arrivals = [p.arrival_time for p in process_queue if p.arrival_time > time]
                 if next_arrivals:
                     time = min(next_arrivals)
 
-        # 마지막에 공식으로 계산!
         for p in ready_queue:
             p.turn_around_time = p.finish_time - p.arrival_time
             p.waiting_time = p.turn_around_time - p.burst_time
