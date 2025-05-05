@@ -1,77 +1,65 @@
-from collections import deque
+from scheduler.process import Process
+from scheduler.multicore.scheduler import Core
 
-class RoundRobin:
-    def __init__(self, time_quantum):
-        self.time_quantum = time_quantum
 
+class HRRN:
     def schedule(self, ready_queue, pcores, ecores):
+        cores = pcores + ecores
         time = 0
-        all_cores = pcores + ecores
-        process_queue = deque(sorted(ready_queue, key=lambda p: (p.arrival_time, p.pid)))
-        waiting_queue = deque()
-        finished = set()
-        quantum_counter = {core.core_id: 0 for core in all_cores}
-        last_leave_time = {p.pid: p.arrival_time for p in ready_queue}
+        # 각 프로세스에 executed(실행) 플래그 초기화
+        for p in ready_queue:
+            p.executed = False
 
-        for core in all_cores:
-            core.current_process = None
-            core.timeline = []
-            core.next_free_time = 0
-            core.is_idle = True
-            core.total_power = 0
-            core.startup_count = 0
+        # 아직 실행되지 않은 모든 프로세스가 실행될 때까지 반복함
+        while not all(p.executed for p in ready_queue):
+            # 현재 시간까지 도착은 했으나 아직 실행안된  프로세스를 골라냄
+            ready = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
+            # 만약에 아직 도착한 프로세스가 없다면, time을 1올려 다시 확인
+            if not ready:
+                time += 1
+                continue
 
-        while len(finished) < len(ready_queue):
-            while process_queue and process_queue[0].arrival_time <= time:
-                waiting_queue.append(process_queue.popleft())
+            # 남은 프로세스들의 "응답비율((대기시간 + 실행시간)/ 실행시간)" 계산
+            for p in ready:
+                wait = time - p.arrival_time
+                p.response_ratio = (wait + p.burst_time) / p.burst_time
+            # "응답비율"이 높은 순으로 정렬함
+            ready.sort(key=lambda p: p.response_ratio, reverse=True)
+            # 할당 플래그
+            assigned = False
 
-            for core in all_cores:
-                if core.current_process is None:
-                    core.is_idle = True
+            # 각 코어가 놀고 있다면 각 코어마다 프로세스 할당
+            for core in cores:
+                # 코어가 비어있는지 확인
+                if core.next_free_time <= time and ready:
+                    # 가장 높은 "응답비율"의 프로세스를 선택
+                    proc = ready.pop(0)
+                    # 프로세스가 실행되고 있다고 표시함
+                    proc.executed = True
+                    # 실행시간 = (실행시간 / 성능)의 "반올림" 값
+                    if core.core_type == 'P':
+                        burst = (proc.burst_time + 1) // 2
+                    else:
+                        busrt = proc.burst_time
 
-            for core in all_cores:
-                if core.current_process is None and waiting_queue:
-                    proc = waiting_queue.popleft()
-                    core.current_process = proc
-                    quantum_counter[core.core_id] = 0
-                    if proc.start_time is None:
-                        proc.start_time = time
-                    if core.is_idle:
+                    # 만약 코어가 놀고 있다가 실행 된다면 시동 전력을 계산함
+                    if core.next_free_time < time:
                         core.total_power += core.startup_power
-                        core.startup_count += 1
-                        core.is_idle = False
-                    if last_leave_time[proc.pid] <= time:
-                        proc.waiting_time += time - last_leave_time[proc.pid]
+                    core.total_power += core.power_rate * burst
 
-            for core in all_cores:
-                proc = core.current_process
-                if proc is not None:
-                    work = min(core.performance, proc.remaining_time)
-                    proc.remaining_time -= work
-                    quantum_counter[core.core_id] += 1
-                    core.total_power += core.power_rate
-                    core.timeline.append((time, proc.pid, 1))
+                    start = time
+                    finish = start + burst
+                    core.timeline.append((start, proc.pid, burst))
+                    # 코어가 일을 끝낸 시간을 알려줌. 즉 코어의 다음 빈 시간을 갱신하는 부분
+                    core.next_free_time = finish
 
-                    if proc.remaining_time <= 0:
-                        proc.finish_time = time + 1
-                        proc.turn_around_time = proc.finish_time - proc.arrival_time
-                        proc.normalized_TT = proc.turn_around_time / proc.burst_time
-                        finished.add(proc)
-                        core.current_process = None
-                        quantum_counter[core.core_id] = 0
-                        core.is_idle = True
-                        last_leave_time[proc.pid] = time + 1
-                    elif quantum_counter[core.core_id] == self.time_quantum:
-                        waiting_queue.append(proc)
-                        core.current_process = None
-                        quantum_counter[core.core_id] = 0
-                        core.is_idle = True
-                        last_leave_time[proc.pid] = time + 1
-
-            time += 1
-
-            if all(core.is_idle for core in all_cores) and not waiting_queue and process_queue:
-                time = process_queue[0].arrival_time
-
-        for core in all_cores:
-            core.current_process = None
+                    proc.start_time = start
+                    proc.finish_time = finish
+                    proc.waiting_time = start - proc.arrival_time
+                    proc.turn_around_time = finish - proc.arrival_time
+                    proc.normalized_TT = proc.turn_around_time / proc.burst_time
+                    # 할당 플래그
+                    assigned = True
+            # 할당 플래그로 할당된 프로세스가 없다면 time을 1로 증가 시켜줌
+            if not assigned:
+                time += 1
