@@ -1,51 +1,61 @@
 import math
-from scheduler.process import Process
-from scheduler.multicore.scheduler import Core
-
-# First Come First Served (FCFS)
 
 class FCFS:
     def schedule(self, ready_queue, pcores, ecores):
         time = 0
         cores = pcores + ecores
-        ready_queue.sort(key=lambda p: p.arrival_time)  # 입력을 도착순서대로 안할 수도 있나???
+        ready_queue.sort(key=lambda p: p.arrival_time)
 
-        while ready_queue or any(not core.is_idle for core in cores): # 레디큐에 프로세스가 남았거나 or 레디큐가 비었을 때에도 작동중인 코어가 하나라도 있을 경우 계속 반복✅
-            # 현재 시간에 도착한 프로세스
-            arrived = [p for p in ready_queue if p.arrival_time <= time]
-            # 사용 가능한 코어
-            free_cores = [c for c in cores if c.next_free_time <= time]
+        for process in ready_queue:
+            process.executed = False
 
-            if not arrived or not free_cores:
-                # 다음 도착할 프로세스 중 가장 빠른 도착 시간
-                next_arrival = min((p.arrival_time for p in ready_queue), default=float('inf'))  # 레디큐가 비어있을 때 무한대를 통해 도착예정 프로세스가 없다는것을 알림✅
-                # 모든 코어 중 가장 빠르게 일을 끝내는 시간
-                next_free = min((c.next_free_time for c in cores), default=float('inf'))
-                # 다음 도착 or 코어 해제까지 점프
-                time = min(next_arrival, next_free) # 타임슬라이스 vs 이벤트 드리븐 시뮬레이션 -> RR은 time을 초단위로 하는게 필수지만 fcfs는 그냥 이벤트 단위로 넘겨도 문제 없나?✅
-                continue
+        while not all(process.executed for process in ready_queue):
 
-            for core in free_cores:
-                if not arrived: # 사용 가능 코어가 있지만 & 도착한 프로세스가 없으면 탈출
-                    break
+            # 현재 시각까지 도착했으나 아직 실행되지 않은 프로세스 리스트
+            arrived = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
 
-                process = arrived.pop(0)
-                ready_queue.remove(process)
+            # 사용용 가능한 코어 리스트
+            idle_cores = [core for core in cores if core.is_idle and core.next_free_time <= time]
 
-                process.start_time = time # max(time, process.arrival_time) -> gpt가 time 대신 이렇게 하라는데 차이 없는거 같음
-                duration = math.ceil(process.burst_time / core.performance) # 코어별로 성능이 다르기 때문에 종료시간에 차이가 있음
-                process.finish_time = process.start_time + duration
-                process.waiting_time = process.start_time - process.arrival_time
-                process.turn_around_time = process.finish_time - process.arrival_time
-                process.normalized_TT = process.turn_around_time / process.burst_time
+            # 1. 도착한 프로세스가 있고 할당 가능한 코어가 있는 경우🚩 -> 코어에 프로세스 할당 진행
+            if arrived and idle_cores:
+                for core in idle_cores:
+                    if not arrived: # 할당 가능한 코어 수 > 할당 가능한 프로세스 수일 때, 프로세스를 모두 할당하면 반복문을 멈추기 위한 안전장치
+                        break
+                    process = arrived.pop(0)
+                    process.executed = True
+                    process.start_time = max(time, process.arrival_time)
+                    duration = math.ceil(process.burst_time / core.performance)
+                    process.finish_time = process.start_time + duration
+                    process.waiting_time = process.start_time - process.arrival_time
+                    process.turn_around_time = process.finish_time - process.arrival_time
+                    process.normalized_TT = process.turn_around_time / process.burst_time
 
-                # 시동 전력 처리 (1초라도 쉬면 시동 걸기)
-                if core.next_free_time < process.start_time:
-                    core.total_power += core.startup_power
-                    core.startup_count += 1  # startup_count변수 필요없을 듯 한데 확인해보기✅
+                    core.is_idle = False
+                    core.next_free_time = process.finish_time
+                    core.total_power += core.power_rate * duration
+                    core.timeline.append((process.start_time, process.pid, duration))
 
-                # 실행 전력 처리
-                core.total_power += core.power_rate * duration
+            # 2. 도착한 프로세스가 있고 할당 가능한 코어가 없는 경우🚩 -> 현재 시간을 작동중인 코어들의 next_free_time 중 가장 작은 값으로 이동
+            elif arrived and not idle_cores:
+                time = min(core.next_free_time for core in cores)
 
-                core.timeline.append((process.start_time, process.pid, duration))
-                core.next_free_time = process.finish_time # next_free_time 갱신 필요? 🚩
+            # 3. 도착한 프로세스가 없고 할당 가능한 코어가 있는 경우🚩 -> 현재 시간을 도착 예정 프로세스들 중에서 가장 근접한 시간으로 이동
+            elif not arrived and idle_cores:
+                next_arrival = min(
+                    (p.arrival_time for p in ready_queue if not p.executed and p.arrival_time > time), # ready_queue에서 아직 실행되지 않았고 현재 시간 이후에 도착하는 프로세스들 중 가장 이른 도착시간을 구함.
+                    default=None # 마지막 프로세스라서 이후 도착 예정 프로세스가 없을 경우 None 반환
+                )
+                if next_arrival is not None: # 반환 값이 None이 아닐 경우 == 도착 예정 프로세스가 있을 경우
+                    time = next_arrival # 현재 시간을 다음 프로세스스 도착 예정시간으로 변경
+                else:
+                    break  # 더 이상 도착할 프로세스가 없음
+
+            # 4. 도착한 프로세스가 없고 할당 가능한 코어가 없는 경우🚩
+            else:
+                next_arrival = min(
+                    (p.arrival_time for p in ready_queue if not p.executed and p.arrival_time > time), # ready_queue에서 아직 실행되지 않았고 현재 시간 이후에 도착하는 프로세스들 중 가장 이른 도착시간을 구함.
+                    default=float('inf') # 마지막 프로세스라서 이후 도착 예정 프로세스가 없을 경우 무한대 값 반환 (min 비교를 위해 무한대 반환환)
+                )
+                next_core_free = min(core.next_free_time for core in cores) # 가장 먼저 비게 되는 코어가 언제 비는지를 구함
+                time = min(next_arrival, next_core_free) # 두 시간을 비교해서 더 이른 시간으로 현재 시간을 이동
