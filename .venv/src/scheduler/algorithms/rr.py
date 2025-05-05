@@ -11,29 +11,23 @@ class RoundRobin:
         waiting_queue = deque()
         finished = set()
         quantum_counter = {core.core_id: 0 for core in all_cores}
-
-    
         last_leave_time = {p.pid: p.arrival_time for p in ready_queue}
 
         while len(finished) < len(ready_queue):
-           
             while process_queue and process_queue[0].arrival_time <= time:
                 waiting_queue.append(process_queue.popleft())
 
-        
             for core in all_cores:
                 if core.current_process is None and waiting_queue:
                     proc = waiting_queue.popleft()
                     core.current_process = proc
                     quantum_counter[core.core_id] = 0
-                   
                     if proc.start_time is None:
                         proc.start_time = time
                     if core.is_idle:
                         core.total_power += core.startup_power
                         core.startup_count += 1
                         core.is_idle = False
-                  
                     if last_leave_time[proc.pid] < time:
                         proc.waiting_time += time - last_leave_time[proc.pid]
 
@@ -57,7 +51,6 @@ class RoundRobin:
                         core.is_idle = True
                         last_leave_time[proc.pid] = time + 1
                     elif quantum_counter[core.core_id] == self.time_quantum:
-                     
                         proc.arrival_time = time + 1
                         waiting_queue.append(proc)
                         core.current_process = None
@@ -67,7 +60,6 @@ class RoundRobin:
 
             time += 1
 
-         
             if all(core.is_idle for core in all_cores) and not waiting_queue and process_queue:
                 next_arrival = process_queue[0].arrival_time
                 time = next_arrival
