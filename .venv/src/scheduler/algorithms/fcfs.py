@@ -31,7 +31,7 @@ class FCFS:
                     process.finish_time = process.start_time + duration
                     process.waiting_time = process.start_time - process.arrival_time
                     process.turn_around_time = process.finish_time - process.arrival_time
-                    process.normalized_TT = process.turn_around_time / process.burst_time
+                    process.normalized_TT = round(process.turn_around_time / process.burst_time,2)
 
                     core.is_idle = False
                     core.next_free_time = process.finish_time
