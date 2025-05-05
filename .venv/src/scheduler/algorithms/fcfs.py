@@ -1,4 +1,6 @@
 import math
+from scheduler.process import Process
+from scheduler.multicore.scheduler import Core
 
 class FCFS:
     def schedule(self, ready_queue, pcores, ecores):
