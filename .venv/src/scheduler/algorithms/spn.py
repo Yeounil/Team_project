@@ -28,9 +28,13 @@ class SPN:
                     start_time = max(time, process.arrival_time)
                     core.timeline.append((start_time, process.pid, burst))
                     core.next_free_time = start_time + burst
+                    process.finish_time = core.next_free_time
 
                     # 전력 계산
                     core.total_power += core.startup_power + burst * core.power_rate
+                    process.waiting_time = start_time - process.arrival_time
+                    process.turn_around_time = core.next_free_time - process.arrival_time
+                    process.normalized_TT = round(process.turn_around_time / burst, 2)
                     core.startup_count += 1
                     core.is_idle = False
 
