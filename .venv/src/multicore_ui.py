@@ -45,6 +45,9 @@ class SchedulerUI(QWidget):
 
         self.add_row_button = QPushButton("프로세스 추가")
         self.run_button = QPushButton("시뮬레이션 실행")
+        self.result_table = QTableWidget(0, 5)
+        self.result_table.setHorizontalHeaderLabels(["PID", "WT", "TT", "NTT", "Finish Time"])
+        self.power_label = QLabel("전력 소비: P-core = 0, E-core = 0, Total = 0")
 
         # 입력 패널 구성
         input_layout.addWidget(self.pcore_label)
@@ -59,6 +62,9 @@ class SchedulerUI(QWidget):
         input_layout.addWidget(self.table)
         input_layout.addWidget(self.add_row_button)
         input_layout.addWidget(self.run_button)
+        input_layout.addWidget(QLabel("스케줄링 결과"))
+        input_layout.addWidget(self.result_table)
+        input_layout.addWidget(self.power_label)
 
         # 오른쪽 Gantt 차트 패널
         self.figure = Figure()
@@ -88,7 +94,6 @@ class SchedulerUI(QWidget):
         pcore_count = self.pcore_input.value()
         ecore_count = self.ecore_input.value()
         total_cores = pcore_count + ecore_count
-
         print(f"▶ 선택된 코어: P={pcore_count}, E={ecore_count}")  # 2단계: 코어 수 확인
 
         if total_cores == 0:
@@ -123,10 +128,24 @@ class SchedulerUI(QWidget):
 
         scheduler_algo = create_scheduler(algorithm_name, quantum)
         print("✅ 스케줄러 생성 완료")
+        self.result_table.setRowCount(len(processes))
 
         multicore_scheduler = MultiCoreScheduler(pcore_count, ecore_count, scheduler_algo)
         multicore_scheduler.load_processes(processes)
         multicore_scheduler.run()
+
+        for i, p in enumerate(processes):
+            self.result_table.setItem(i, 0, QTableWidgetItem(str(p.pid)))
+            self.result_table.setItem(i, 1, QTableWidgetItem(str(p.waiting_time)))
+            self.result_table.setItem(i, 2, QTableWidgetItem(str(p.turn_around_time)))
+            self.result_table.setItem(i, 3, QTableWidgetItem(str(p.normalized_TT)))
+            self.result_table.setItem(i, 4, QTableWidgetItem(str(p.finish_time)))
+
+        p_power = sum(c.total_power for c in multicore_scheduler.pcores)
+        e_power = sum(c.total_power for c in multicore_scheduler.ecores)
+        total_power = p_power + e_power
+
+        self.power_label.setText(f"전력 소비: P-core = {p_power:.2f}W, E-core = {e_power:.2f}W, Total = {total_power:.2f}W")
 
         timelines = multicore_scheduler.get_timelines()
         core_types = multicore_scheduler.get_core_types()
