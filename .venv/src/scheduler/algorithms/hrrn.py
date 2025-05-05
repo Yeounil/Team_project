@@ -5,6 +5,7 @@ class HRRN:
     def schedule(self, ready_queue, pcores, ecores):
         cores = pcores + ecores
         time = 0
+
         # 각 프로세스에 executed(실행) 플래그 초기화
         for p in ready_queue:
             p.executed = False
@@ -12,6 +13,9 @@ class HRRN:
         # 아직 실행되지 않은 모든 프로세스가 실행될 때까지 반복함
         while not all(p.executed for p in ready_queue):
             # 현재 시간까지 도착은 했으나 아직 실행안된  프로세스를 골라냄
+            for core in cores:
+                if core.next_free_time <= time:
+                    core.is_idle = True
             ready = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
             # 만약에 아직 도착한 프로세스가 없다면, time을 1올려 다시 확인
             if not ready:
@@ -24,6 +28,7 @@ class HRRN:
                 p.response_ratio = (wait + p.burst_time) / p.burst_time
             # "응답비율"이 높은 순으로 정렬함
             ready.sort(key=lambda p: p.response_ratio, reverse=True)
+
             # 할당 플래그
             assigned = False
 
@@ -39,12 +44,16 @@ class HRRN:
                     if core.core_type == 'P':
                         burst = (proc.burst_time + 1) // 2
                     else:
-                        busrt = proc.burst_time
-                        
+                        burst = proc.burst_time
+
+                    # 시동 전력 계산 부분
                     # 만약 코어가 놀고 있다가 실행 된다면 시동 전력을 계산함
-                    if core.next_free_time < time:
+                    if core.is_idle:
                         core.total_power += core.startup_power
+                        core.startup_count += 1
+                    # 실행 전력 계산 부분
                     core.total_power += core.power_rate * burst
+                    core.is_idle = False
 
                     start = time
                     finish = start + burst
