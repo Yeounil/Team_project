@@ -1,89 +1,88 @@
+from scheduler.process import Process
 from collections import deque
 
 class RoundRobin:
-    def __init__(self, time_quantum):
-        self.time_quantum = time_quantum
+    def __init__(self, quantum=2):
+        self.quantum = quantum
 
     def schedule(self, ready_queue, pcores, ecores):
         time = 0
         all_cores = pcores + ecores
 
-        # 프로세스 초기화
+        # 초기화
         for p in ready_queue:
             p.remaining_time = p.burst_time
+            p.executed = False
             p.start_time = None
             p.finish_time = None
+            p.real_burst = 0
 
-        # 도착 대기열: 도착 시간 순으로 정렬
-        arrival_queue = deque(sorted(ready_queue, key=lambda p: (p.arrival_time, p.pid)))
-        rr_queue = deque()
+        process_queue = deque(sorted(ready_queue, key=lambda p: p.arrival_time))
+        waiting_queue = deque()
         running = [None] * len(all_cores)
         quantum_counter = [0] * len(all_cores)
 
-        finished_count = 0
-        total_processes = len(ready_queue)
+        while not all(p.executed for p in ready_queue):
+            # 도착한 프로세스 waiting_queue에 추가
+            while process_queue and process_queue[0].arrival_time <= time:
+                waiting_queue.append(process_queue.popleft())
 
-        while finished_count < total_processes:
-            # 1. 현재 시간에 도착한 프로세스 rr_queue로 이동
-            while arrival_queue and arrival_queue[0].arrival_time <= time:
-                rr_queue.append(arrival_queue.popleft())
-
-            # 2. 각 코어에 프로세스 할당
-            assigned_pid = set()
             for i, core in enumerate(all_cores):
-                # 종료된 프로세스 처리 (finish_time은 오직 여기서만 기록!)
-                proc = running[i]
-                if proc and proc.remaining_time <= 0:
-                    if proc.finish_time is None:  # 중복 기록 방지
-                        proc.finish_time = time
-                        finished_count += 1
-                    running[i] = None
-                    quantum_counter[i] = 0
-                    continue
+                current_proc = running[i]
 
-                # 타임슬라이스 만료
-                if proc and quantum_counter[i] >= self.time_quantum:
-                    rr_queue.append(proc)
-                    running[i] = None
-                    quantum_counter[i] = 0
+                # 실행 중인 프로세스가 없거나 Quantum을 다 썼다면 새로 할당
+                if (current_proc is None or quantum_counter[i] <= 0 or current_proc.remaining_time <= 0) and waiting_queue:
+                    # 이전 프로세스 처리 완료
+                    if current_proc and current_proc.remaining_time <= 0:
+                        current_proc.finish_time = time
+                        current_proc.turn_around_time = current_proc.finish_time - current_proc.arrival_time
+                        current_proc.waiting_time = current_proc.turn_around_time - current_proc.burst_time
+                        current_proc.normalized_TT = round(current_proc.turn_around_time / current_proc.burst_time, 2)
+                        current_proc.executed = True
+                        running[i] = None
 
-                # 빈 코어에 할당
-                if running[i] is None:
-                    for idx, cand in enumerate(rr_queue):
-                        if cand.pid not in assigned_pid and cand.remaining_time > 0:
-                            running[i] = cand
-                            quantum_counter[i] = 0
-                            assigned_pid.add(cand.pid)
-                            if cand.start_time is None:
-                                cand.start_time = time
-                            if core.is_idle:
-                                core.total_power += core.startup_power
-                                core.startup_count += 1
-                                core.is_idle = False
-                            rr_queue.remove(cand)
-                            break
-                    else:
-                        core.is_idle = True
+                    # quantum 안 끝났지만 선점된 경우 다시 waiting_queue로
+                    elif current_proc and current_proc.remaining_time > 0:
+                        waiting_queue.append(current_proc)
+                        running[i] = None
 
-            # 3. 실행
-            for i, core in enumerate(all_cores):
-                proc = running[i]
-                if proc:
-                    work = min(core.performance, proc.remaining_time)
-                    proc.remaining_time -= work
-                    quantum_counter[i] += 1
+                    # 새 프로세스 할당
+                    if waiting_queue:
+                        proc = waiting_queue.popleft()
+                        if proc.start_time is None:
+                            proc.start_time = time
+                        running[i] = proc
+                        quantum_counter[i] = self.quantum
+
+                        # 전력 및 부팅 비용
+                        if core.is_idle:
+                            core.total_power += core.startup_power
+                            core.startup_count += 1
+                        core.is_idle = False
+
+                # 실행
+                current_proc = running[i]
+                if current_proc:
+                    quantum_counter[i] -= 1
+                    exec_unit = 2 if core.core_type == 'P' else 1
+                    current_proc.remaining_time -= exec_unit
+                    current_proc.real_burst += 1
+
+                    core.timeline.append((time, current_proc.pid, 1))
                     core.total_power += core.power_rate
-                    core.timeline.append((time, proc.pid, 1))
-                elif core.is_idle is False:
+
+                    # 종료
+                    if current_proc.remaining_time <= 0:
+                        current_proc.finish_time = time + 1
+                        current_proc.turn_around_time = current_proc.finish_time - current_proc.arrival_time
+                        current_proc.waiting_time = current_proc.turn_around_time - current_proc.burst_time
+                        current_proc.normalized_TT = round(current_proc.turn_around_time / current_proc.burst_time, 2)
+                        current_proc.executed = True
+                        running[i] = None
+                        quantum_counter[i] = 0
+
+            for i, core in enumerate(all_cores):
+                if running[i] is None:
                     core.is_idle = True
 
-          
-            if all(r is None for r in running) and not rr_queue and arrival_queue:
-                time = arrival_queue[0].arrival_time
-            else:
-                time += 1
-
-        for p in ready_queue:
-            p.turn_around_time = p.finish_time - p.arrival_time
-            p.waiting_time = p.turn_around_time - p.burst_time
-            p.normalized_TT = round(p.turn_around_time / p.burst_time, 2)
+            time += 1
