@@ -69,9 +69,8 @@ class HRRN:
                     proc.normalized_TT     = proc.turn_around_time / proc.burst_time
                     # 할당 플래그
                     assigned = True
-                    break
-            # 할당 플래그로 할당된 프로세스가 없다면 time을 1로 증가 시켜줌
-            if not assigned:
-                time = min(core.next_free_time for c in cores)
+
+            if assigned:
+                time = min(core.next_free_time for core in cores if core.next_free_time > time)
             else:
                 time += 1
