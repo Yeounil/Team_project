@@ -26,13 +26,13 @@ class RoundRobin:
             proc.waiting_time = 0
             proc.finish_time = None
 
-        # WT 누적을 위한 마지막 내려온 시간 기록
         last_leave_time = {p.pid: p.arrival_time for p in ready_queue}
 
         while len(finished) < len(ready_queue):
             while process_queue and process_queue[0].arrival_time <= time:
                 waiting_queue.append(process_queue.popleft())
 
+            
             for core in all_cores:
                 if core.current_process is None and waiting_queue:
                     proc = waiting_queue.popleft()
@@ -44,10 +44,11 @@ class RoundRobin:
                         core.total_power += core.startup_power
                         core.startup_count += 1
                         core.is_idle = False
-                    # WT 누적
+                  
                     if last_leave_time[proc.pid] < time:
                         proc.waiting_time += time - last_leave_time[proc.pid]
 
+         
             for core in all_cores:
                 proc = core.current_process
                 if proc is not None:
@@ -57,6 +58,7 @@ class RoundRobin:
                     core.total_power += core.power_rate
                     core.timeline.append((time, proc.pid, 1))
 
+                 
                     if proc.remaining_time <= 0:
                         proc.finish_time = time + 1
                         finished.add(proc)
@@ -64,6 +66,7 @@ class RoundRobin:
                         core.is_idle = True
                         quantum_counter[core.core_id] = 0
                         last_leave_time[proc.pid] = time + 1
+                    
                     elif quantum_counter[core.core_id] == self.time_quantum:
                         waiting_queue.append(proc)
                         core.current_process = None
@@ -78,7 +81,6 @@ class RoundRobin:
 
         for proc in ready_queue:
             proc.turn_around_time = proc.finish_time - proc.arrival_time
-            # WT는 누적값을 그대로 사용!
             proc.normalized_TT = proc.turn_around_time / proc.burst_time
 
         for core in all_cores:
