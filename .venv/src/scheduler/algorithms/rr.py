@@ -11,7 +11,6 @@ class RoundRobin:
         waiting_queue = deque()
         finished = set()
         quantum_counter = {core.core_id: 0 for core in all_cores}
-        last_leave_time = {p.pid: p.arrival_time for p in ready_queue}
 
         for core in all_cores:
             core.current_process = None
@@ -20,6 +19,10 @@ class RoundRobin:
             core.is_idle = True
             core.total_power = 0
             core.startup_count = 0
+
+        for proc in ready_queue:
+            proc.remaining_time = proc.burst_time
+            proc.start_time = None
 
         while len(finished) < len(ready_queue):
             while process_queue and process_queue[0].arrival_time <= time:
@@ -36,8 +39,6 @@ class RoundRobin:
                         core.total_power += core.startup_power
                         core.startup_count += 1
                         core.is_idle = False
-                    if last_leave_time[proc.pid] < time:
-                        proc.waiting_time += time - last_leave_time[proc.pid]
 
             for core in all_cores:
                 proc = core.current_process
@@ -50,27 +51,25 @@ class RoundRobin:
 
                     if proc.remaining_time <= 0:
                         proc.finish_time = time + 1
-                        proc.turn_around_time = proc.finish_time - proc.arrival_time
-                      
-                        proc.normalized_TT = proc.turn_around_time / proc.burst_time
-                        finished.add(proc)
                         core.current_process = None
-                        quantum_counter[core.core_id] = 0
                         core.is_idle = True
-                        last_leave_time[proc.pid] = time + 1
+                        quantum_counter[core.core_id] = 0
+                        finished.add(proc)
                     elif quantum_counter[core.core_id] == self.time_quantum:
-                        
                         waiting_queue.append(proc)
                         core.current_process = None
-                        quantum_counter[core.core_id] = 0
                         core.is_idle = True
-                        last_leave_time[proc.pid] = time + 1
+                        quantum_counter[core.core_id] = 0
 
             time += 1
 
             if all(core.is_idle for core in all_cores) and not waiting_queue and process_queue:
-                next_arrival = process_queue[0].arrival_time
-                time = next_arrival
+                time = process_queue[0].arrival_time
+
+        for proc in ready_queue:
+            proc.turn_around_time = proc.finish_time - proc.arrival_time
+            proc.waiting_time = proc.turn_around_time - proc.burst_time
+            proc.normalized_TT = proc.turn_around_time / proc.burst_time
 
         for core in all_cores:
             core.current_process = None
