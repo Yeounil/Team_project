@@ -1,17 +1,12 @@
 from scheduler.algorithms.fcfs import FCFS
-from scheduler.algorithms.sjf import SJF
-from scheduler.algorithms.priority import Priority
 from scheduler.algorithms.rr import RoundRobin
 from scheduler.algorithms.spn import SPN
 from scheduler.algorithms.srtn import SRTN
+from scheduler.algorithms.hrrn import HRRN
 
 def create_scheduler(name, quantum=None):
     if name.lower() == "fcfs":
         return FCFS()
-    elif name.lower() == "sjf":
-        return SJF()
-    elif name.lower() == "priority":
-        return Priority()
     elif name.lower() == "spn":
         return SPN()
     elif name.lower() == "rr":
@@ -20,5 +15,7 @@ def create_scheduler(name, quantum=None):
         return RoundRobin(quantum)
     elif name.lower() == "srtn":
         return SRTN()
+    elif name.lower() == "hrrn":
+        return HRRN()
     else:
         raise ValueError(f"알 수 없는 알고리즘 이름: {name}")
