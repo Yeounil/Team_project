@@ -10,3 +10,4 @@ class Process:
         self.turn_around_time = 0  # 반환시간
         self.normalized_TT = 0  # NTT
         self.executed = 0 # 프로세스 실행 여부
+        self.real_burst = 0 # 실제 실행 시간
