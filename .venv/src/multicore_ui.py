@@ -16,8 +16,8 @@ from scheduler.process import Process
 class SchedulerUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Multicore Process Scheduler")
-        self.setMinimumSize(1200, 700)
+        self.setWindowTitle("Multicore Process Scheduler") #window 제목 설정
+        self.setMinimumSize(1600, 800)
 
         main_layout = QHBoxLayout(self)
         splitter = QSplitter(Qt.Horizontal)
@@ -70,7 +70,8 @@ class SchedulerUI(QWidget):
         # Gantt 차트 영역
         chart_panel = QWidget()
         chart_layout = QVBoxLayout(chart_panel)
-        self.figure = Figure()
+        self.figure = Figure(figsize=(10, 6))
+        self.figure.subplots_adjust(left=0.01, right=0.99, top=0.95, bottom=0.1)
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         chart_layout.addWidget(self.canvas)
