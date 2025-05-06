@@ -1,75 +1,71 @@
-import math
-from typing import List
 from scheduler.process import Process
 from scheduler.multicore.scheduler import Core
 
 class Priority:
-    def schedule(self, ready_queue: List[Process], pcores: List[Core], ecores: List[Core]):
-        cores = pcores + ecores
+    def schedule(self, ready_queue, pcores, ecores):
         time = 0
-
+        all_cores = pcores + ecores
+        # 평균 실행시간 계산
         avg_burst = sum(p.burst_time for p in ready_queue) / len(ready_queue)
-
-        p_queue = [p for p in ready_queue if p.burst_time >= avg_burst]
-        e_queue = [p for p in ready_queue if p.burst_time <  avg_burst]
-
         for p in ready_queue:
             p.executed = False
 
-        while p_queue or e_queue:
-            assigned = False
-
-            free_cores = [c for c in cores if c.next_free_time <= time]
-            available_tasks = [p for p in (p_queue + e_queue) if p.arrival_time <= time]
-
-            if not free_cores or not available_tasks:
-                next_events = []
-                next_events.extend([c.next_free_time for c in cores if c.next_free_time > time])
-
-                next_events.extend([p.arrival_time for p in (p_queue + e_queue) if p.arrival_time > time])
-                if not next_events:
-                    break
-                time = min(next_events)
+        while not all(p.executed for p in ready_queue):
+            # 현재까지 도착한 미실행 프로세스
+            available = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
+            if not available:
+                time += 1
                 continue
 
-            for core in free_cores:
-                proc = None
-                if core.core_type == 'P':
-                    for p in p_queue:
-                        if p.arrival_time <= time:
-                            proc = p
-                            p_queue.remove(p)
-                            break
+            # P/E 코어 할당 대상 분리
+            pcore_candidates = [p for p in available if p.burst_time > avg_burst]
+            ecore_candidates = [p for p in available if p.burst_time <= avg_burst]
+
+            # P-core 우선 할당
+            for core in pcores:
+                if core.next_free_time <= time and pcore_candidates:
+                    proc = pcore_candidates.pop(0)
+                    self._assign(core, proc, time)
+                    proc.executed = True
+
+            # E-core 우선 할당
+            for core in ecores:
+                if core.next_free_time <= time and ecore_candidates:
+                    proc = ecore_candidates.pop(0)
+                    self._assign(core, proc, time)
+                    proc.executed = True
+
+            # P-core에 할당 못한 남은 프로세스 처리
+            for proc in pcore_candidates:
+                # 가장 빨리 비는 P-core와 E-core의 종료시간 비교
+                soonest_pcore = min(pcores, key=lambda c: c.next_free_time)
+                soonest_ecore = min(ecores, key=lambda c: c.next_free_time)
+                # 각 코어에서 실행 시 종료시간 예측
+                p_start = max(soonest_pcore.next_free_time, proc.arrival_time)
+                p_finish = p_start + (proc.burst_time + 1) // 2
+                e_start = max(soonest_ecore.next_free_time, proc.arrival_time)
+                e_finish = e_start + proc.burst_time
+                # 더 빨리 끝나는 쪽에 할당
+                if p_finish <= e_finish:
+                    self._assign(soonest_pcore, proc, p_start)
+                    soonest_pcore.next_free_time = p_finish
                 else:
-                    for p in e_queue:
-                        if p.arrival_time <= time:
-                            proc = p
-                            e_queue.remove(p)
-                            break
-                    if proc is None:
-                        for p in p_queue:
-                            if p.arrival_time <= time:
-                                soonest_p = min(c.next_free_time for c in pcores)
-                                if (soonest_p - time) >= p.burst_time:
-                                    proc = p
-                                    p_queue.remove(p)
-                                break
-
-                if proc is None:
-                    continue
-
-                assigned = True
-                start = time
-                core.timeline.append((start, proc.pid))
-                duration = math.ceil(proc.burst_time / 2) if core.core_type == 'P' else proc.burst_time
-                proc.start_time = start
-                proc.finish_time = start + duration
+                    self._assign(soonest_ecore, proc, e_start)
+                    soonest_ecore.next_free_time = e_finish
                 proc.executed = True
-                core.next_free_time = proc.finish_time
 
-            if not assigned:
-                future_times = [c.next_free_time for c in cores if c.next_free_time > time]
-                if future_times:
-                    time = min(future_times)
-                else:
-                    break
+            time += 1
+
+    def _assign(self, core, proc, start):
+        if core.core_type == 'P':
+            burst = (proc.burst_time + 1) // 2
+        else:
+            burst = proc.burst_time
+        finish = start + burst
+        core.timeline.append((start, proc.pid, burst))
+        core.next_free_time = finish
+        proc.start_time = start
+        proc.finish_time = finish
+        proc.waiting_time = start - proc.arrival_time
+        proc.turn_around_time = finish - proc.arrival_time
+        proc.normalized_TT = round(proc.turn_around_time / proc.burst_time, 2)
