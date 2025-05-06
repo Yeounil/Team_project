@@ -1,4 +1,6 @@
 from collections import deque
+from scheduler.process import Process
+from scheduler.multicore.scheduler import Core
 
 class RoundRobin:
     def __init__(self, quantum=2):
@@ -12,10 +14,10 @@ class RoundRobin:
         # 프로세스 초기화
         for p in ready_queue:
             p.remaining_time = p.burst_time
+            p.real_burst = 0
             p.start_time = None
             p.finish_time = None
             p.executed = False
-            p.real_burst = 0
 
         running = [None] * n_cores
         quantum_counter = [0] * n_cores
@@ -24,27 +26,28 @@ class RoundRobin:
         arrived_idx = 0
 
         while not all(p.executed for p in ready_queue):
-            # 도착한 프로세스 레디큐에 추가
+            # 도착 프로세스 추가
             while arrived_idx < len(arrival_sorted) and arrival_sorted[arrived_idx].arrival_time <= time:
                 rr_queue.append(arrival_sorted[arrived_idx])
                 arrived_idx += 1
 
             assigned_pid = set()
 
-            # 할당/선점/종료 처리
             for i, core in enumerate(all_cores):
                 proc = running[i]
 
                 # 종료 처리
                 if proc and proc.remaining_time <= 0:
-                    if proc.finish_time is None:
-                        proc.finish_time = time
+                    proc.finish_time = time
+                    proc.turn_around_time = proc.finish_time - proc.arrival_time
+                    proc.waiting_time = proc.turn_around_time - proc.burst_time
+                    proc.normalized_TT = round(proc.turn_around_time / proc.burst_time, 2)
                     proc.executed = True
                     running[i] = None
                     quantum_counter[i] = 0
 
-                # 타임퀀텀 소진 시 선점
-                if proc and quantum_counter[i] <= 0 and proc.remaining_time > 0:
+                # 타임퀀텀 소진 → 다시 큐로
+                elif proc and quantum_counter[i] == 0:
                     rr_queue.append(proc)
                     running[i] = None
 
@@ -60,10 +63,12 @@ class RoundRobin:
                             rr_queue.remove(p)
                             break
 
+            # [핵심] 각 코어가 "성능만큼" 반복 실행 (P=2, E=1)
             for i, core in enumerate(all_cores):
                 proc = running[i]
                 if proc and proc.remaining_time > 0 and quantum_counter[i] > 0:
-                    for _ in range(core.performance):
+                    performance = core.performance  # P=2, E=1
+                    for _ in range(performance):
                         if proc.remaining_time > 0 and quantum_counter[i] > 0:
                             proc.remaining_time -= 1
                             quantum_counter[i] -= 1
@@ -75,28 +80,15 @@ class RoundRobin:
                                 core.startup_count += 1
                             core.is_idle = False
                 else:
-                    core.is_idle = True
+                    if not core.is_idle:
+                        core.is_idle = True
 
-            # tick 끝나고 종료/선점 처리
-            for i, core in enumerate(all_cores):
-                proc = running[i]
-                if proc:
-                    if proc.remaining_time == 0:
-                        proc.finish_time = time + 1
-                        proc.executed = True
-                        running[i] = None
-                        quantum_counter[i] = 0
-                    elif quantum_counter[i] == 0:
-                        rr_queue.append(proc)
-                        running[i] = None
-
-            # 모두 idle & 큐 비었으면 다음 도착까지 점프
+            # 시간 이동
             if all(r is None for r in running) and not rr_queue and arrived_idx < len(arrival_sorted):
                 time = arrival_sorted[arrived_idx].arrival_time
             else:
                 time += 1
 
-        # WT, TT, NTT 공식에 따라 계산
         for p in ready_queue:
             p.turn_around_time = p.finish_time - p.arrival_time
             p.waiting_time = p.turn_around_time - p.burst_time
