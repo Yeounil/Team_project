@@ -35,6 +35,17 @@ class Priority:
                     self._assign(core, proc, time)
                     proc.executed = True
 
+            for core in pcores:
+                if core.next_free_time <= time:
+                    if pcore_candidates:
+                        proc = pcore_candidates.pop(0)
+                    elif ecore_candidates:
+                        proc = ecore_candidates.pop(0)
+                    else:
+                        continue
+                    self._assign(core, proc, time)
+                    proc.executed = True
+
             # P-core에 할당 못한 남은 프로세스 처리
             for proc in pcore_candidates:
                 # 가장 빨리 비는 P-core와 E-core의 종료시간 비교
