@@ -33,13 +33,14 @@ class RoundRobin:
 
             assigned_pid = set()
 
+            # 종료/선점/할당 처리
             for i, core in enumerate(all_cores):
                 proc = running[i]
 
-                # 종료 처리 (finish_time을 time+1로!)
+                # 종료 처리
                 if proc and proc.remaining_time <= 0:
                     if proc.finish_time is None:
-                        proc.finish_time = time + 1
+                        proc.finish_time = time  # 임시, 아래에서 정확히 처리
                     proc.executed = True
                     running[i] = None
                     quantum_counter[i] = 0
@@ -77,9 +78,15 @@ class RoundRobin:
                                 core.total_power += core.startup_power
                                 core.startup_count += 1
                             core.is_idle = False
+                            # 반복 중간에 프로세스가 끝나면 finish_time = time+1
+                            if proc.remaining_time == 0:
+                                proc.finish_time = time + 1
+                                proc.executed = True
+                                running[i] = None
+                                quantum_counter[i] = 0
+                                break
                 else:
-                    if not core.is_idle:
-                        core.is_idle = True
+                    core.is_idle = True
 
             # 시간 이동
             if all(r is None for r in running) and not rr_queue and arrived_idx < len(arrival_sorted):
@@ -87,7 +94,11 @@ class RoundRobin:
             else:
                 time += 1
 
+        # WT, TT, NTT 계산
         for p in ready_queue:
+            # finish_time이 None인 경우(이론상 없음) 보정
+            if p.finish_time is None:
+                p.finish_time = time
             p.turn_around_time = p.finish_time - p.arrival_time
             p.waiting_time = p.turn_around_time - p.burst_time
             p.normalized_TT = round(p.turn_around_time / p.burst_time, 2)
