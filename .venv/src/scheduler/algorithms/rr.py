@@ -1,4 +1,5 @@
 from scheduler.process import Process
+from scheduler.multicore.scheduler import Core
 from collections import deque
 
 class RoundRobin:
