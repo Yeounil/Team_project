@@ -36,18 +36,16 @@ class RoundRobin:
             for i, core in enumerate(all_cores):
                 proc = running[i]
 
-                # 종료 처리
+                # 종료 처리 (finish_time을 time+1로!)
                 if proc and proc.remaining_time <= 0:
-                    proc.finish_time = time
-                    proc.turn_around_time = proc.finish_time - proc.arrival_time
-                    proc.waiting_time = proc.turn_around_time - proc.burst_time
-                    proc.normalized_TT = round(proc.turn_around_time / proc.burst_time, 2)
+                    if proc.finish_time is None:
+                        proc.finish_time = time + 1
                     proc.executed = True
                     running[i] = None
                     quantum_counter[i] = 0
 
                 # 타임퀀텀 소진 → 다시 큐로
-                elif proc and quantum_counter[i] == 0:
+                if proc and quantum_counter[i] <= 0 and proc.remaining_time > 0:
                     rr_queue.append(proc)
                     running[i] = None
 
@@ -58,8 +56,6 @@ class RoundRobin:
                             running[i] = p
                             quantum_counter[i] = self.quantum
                             assigned_pid.add(p.pid)
-                            if p.start_time is None:
-                                p.start_time = time
                             rr_queue.remove(p)
                             break
 
@@ -70,6 +66,8 @@ class RoundRobin:
                     performance = core.performance  # P=2, E=1
                     for _ in range(performance):
                         if proc.remaining_time > 0 and quantum_counter[i] > 0:
+                            if proc.start_time is None:
+                                proc.start_time = time  # 최초 실행 시점에만 기록
                             proc.remaining_time -= 1
                             quantum_counter[i] -= 1
                             proc.real_burst += 1
