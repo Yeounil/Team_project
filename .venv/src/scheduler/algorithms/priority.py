@@ -69,3 +69,10 @@ class Priority:
         proc.waiting_time = start - proc.arrival_time
         proc.turn_around_time = finish - proc.arrival_time
         proc.normalized_TT = round(proc.turn_around_time / proc.burst_time, 2)
+
+        # 시동 전력: 코어가 유휴 상태였다면 추가
+        if core.is_idle:
+            core.total_power += core.startup_power
+            core.startup_count += 1
+         # 동작 전력: burst * power_rate
+            core.total_power += burst * core.power_rate
