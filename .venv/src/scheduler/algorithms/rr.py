@@ -63,14 +63,14 @@ class RoundRobin:
                     if proc.start_time is None:
                         proc.start_time = time
 
-                    perf = core.performance  # 예: P=2, E=1
-                    work = min(perf, proc.remaining_time, quantum_counter[i])
+                    if(core.core_type == 'P'):
+                        work = 2
+                    else:
+                        work = 1
 
                     proc.remaining_time -= work
-                    quantum_counter[i] -= work
                     proc.real_burst += 1  # 실제로 이 코어가 1 tick 동안 사용됨
-
-                    core.timeline.append((time, proc.pid, work))
+                    core.timeline.append((time, proc.pid, self.quantum))
                     core.total_power += core.power_rate
                     if core.is_idle:
                         core.total_power += core.startup_power
@@ -82,6 +82,10 @@ class RoundRobin:
                         proc.executed = True
                         running[i] = None
                         quantum_counter[i] = 0
+                        proc.turn_around_time = proc.finish_time - proc.arrival_time
+                        proc.waiting_time = proc.turn_around_time - proc.real_burst
+                        proc.normalized_TT = round(proc.turn_around_time / proc.real_burst, 2)
+
                 else:
                     core.is_idle = True
 
@@ -91,16 +95,3 @@ class RoundRobin:
             else:
                 time += 1
 
-        # WT, TT, NTT 계산
-        for p in ready_queue:
-            if p.finish_time is None:
-                p.finish_time = time
-            if p.start_time is None:
-                p.start_time = p.arrival_time
-
-            p.turn_around_time = p.finish_time - p.arrival_time
-            p.waiting_time = p.turn_around_time - p.burst_time
-            if p.burst_time > 0:
-                p.normalized_TT = round(p.turn_around_time / p.burst_time, 2)
-            else:
-                p.normalized_TT = 0.0
