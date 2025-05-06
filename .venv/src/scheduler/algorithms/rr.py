@@ -96,9 +96,11 @@ class RoundRobin:
 
         # WT, TT, NTT 계산
         for p in ready_queue:
-            # finish_time이 None인 경우(이론상 없음) 보정
             if p.finish_time is None:
                 p.finish_time = time
-            p.turn_around_time = p.finish_time - p.arrival_time
-            p.waiting_time = p.turn_around_time - p.burst_time
-            p.normalized_TT = round(p.turn_around_time / p.burst_time, 2)
+            if p.turn_around_time is None:
+                p.turn_around_time = p.finish_time - p.arrival_time
+            if p.waiting_time is None:
+                p.waiting_time = p.turn_around_time - p.burst_time
+            if p.normalized_TT is None:
+                p.normalized_TT = round(p.turn_around_time / p.burst_time, 2)
