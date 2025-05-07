@@ -35,7 +35,6 @@ class SPN:
                     process.waiting_time = start_time - process.arrival_time
                     process.turn_around_time = core.next_free_time - process.arrival_time
                     process.normalized_TT = round(process.turn_around_time / burst, 2)
-                    core.startup_count += 1
                     core.is_idle = False
 
                     process.executed = True
