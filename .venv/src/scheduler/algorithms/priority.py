@@ -90,5 +90,4 @@ class Priority:
         # 전력 계산: 유휴 상태라면 시동 전력 + 동작 전력
         if core.is_idle:
             core.total_power += core.startup_power
-            core.startup_count += 1
         core.total_power += burst * core.power_rate
