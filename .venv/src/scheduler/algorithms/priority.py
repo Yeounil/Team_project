@@ -85,7 +85,7 @@ class Priority:
         proc.finish_time = finish
         proc.waiting_time = start - proc.arrival_time
         proc.turn_around_time = finish - proc.arrival_time
-        proc.normalized_TT = round(proc.turn_around_time / proc.burst_time, 2)
+        proc.normalized_TT = round(proc.turn_around_time / burst, 2)
 
         # 전력 계산: 유휴 상태라면 시동 전력 + 동작 전력
         if core.is_idle:
