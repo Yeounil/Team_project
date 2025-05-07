@@ -53,10 +53,8 @@ class SRTN:
 
                 # 실제 실행 시간 단위: 시뮬레이션은 1초 단위로 진행
                 exec_time = 1
-                if core.core_type == 'P':
-                    next_proc.remaining_time -= 2  # P코어는 성능이 2배
-                else:
-                    next_proc.remaining_time -= 1  # E코어는 기본 성능
+
+                next_proc.remaining_time -= core.performance  # P코어는 성능이 2배
 
                 next_proc.real_burst += exec_time  # 실제 실행 tick 기록
 
@@ -79,7 +77,7 @@ class SRTN:
                 if next_proc.remaining_time <= 0:
                     next_proc.finish_time = time + exec_time
                     next_proc.turn_around_time = next_proc.finish_time - next_proc.arrival_time
-                    next_proc.waiting_time = next_proc.start_time - next_proc.arrival_time
+                    next_proc.waiting_time = next_proc.turn_around_time - next_proc.real_burst
                     next_proc.normalized_TT = round(next_proc.turn_around_time / next_proc.real_burst, 2)
                     next_proc.executed = True
                     running[i] = None  # 해당 코어 비우기
