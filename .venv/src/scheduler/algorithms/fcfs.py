@@ -17,7 +17,7 @@ class FCFS:
             arrived = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
 
             # 사용 가능한 코어 리스트
-            idle_cores = [core for core in cores if core.is_idle and core.next_free_time <= time]
+            idle_cores = [core for core in cores if core.next_free_time <= time]
 
             # 1. 도착한 프로세스가 있고 할당 가능한 코어가 있는 경우🚩 -> 코어에 프로세스 할당 진행
             if arrived and idle_cores:
@@ -26,21 +26,20 @@ class FCFS:
                         break
                     process = arrived.pop(0)
                     process.executed = True
-
                     process.start_time = max(time, process.arrival_time)
-                    duration = math.ceil(process.burst_time / core.performance)
-                    process.finish_time = process.start_time + duration
+                    process.real_burst = math.ceil(process.burst_time / core.performance)
+                    process.finish_time = process.start_time + process.real_burst
                     process.waiting_time = process.start_time - process.arrival_time
                     process.turn_around_time = process.finish_time - process.arrival_time
-                    process.normalized_TT = round(process.turn_around_time / process.burst_time,2)
+                    process.normalized_TT = round(process.turn_around_time / process.real_burst,2)
 
                     core.next_free_time = process.finish_time
                     # 전력 계산: 유휴 상태라면 시동 전력 + 동작 전력
                     if core.is_idle:
                         core.total_power += core.startup_power
                     core.is_idle = False
-                    core.total_power += core.power_rate * duration
-                    core.timeline.append((process.start_time, process.pid, duration))
+                    core.total_power += core.power_rate * process.real_burst
+                    core.timeline.append((process.start_time, process.pid, process.real_burst))
 
             # 2. 도착한 프로세스가 있고 할당 가능한 코어가 없는 경우🚩 -> 현재 시간을 작동중인 코어들의 next_free_time 중 가장 작은 값으로 이동
             elif arrived and not idle_cores:
