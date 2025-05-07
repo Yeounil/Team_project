@@ -90,7 +90,6 @@ class RoundRobin:
                 # 전력 계산, 유휴였다면 시동 전력, 동작 전력 추가
                 if core.is_idle:
                     core.total_power   += core.startup_power
-                    core.startup_count += 1
                     core.is_idle        = False
                 core.total_power += core.power_rate * work
 
