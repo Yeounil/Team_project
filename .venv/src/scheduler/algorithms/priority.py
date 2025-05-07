@@ -15,6 +15,9 @@ class Priority:
             p.normalized_TT = None
 
         while not all(p.executed for p in ready_queue):
+            for core in cores:
+                if core.next_free_time < time:
+                    core.is_idle = True
             # 현재까지 도착한 미실행 프로세스
             available = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
             if not available:
