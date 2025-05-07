@@ -38,7 +38,6 @@ class FCFS:
                     # 전력 계산: 유휴 상태라면 시동 전력 + 동작 전력
                     if core.is_idle:
                         core.total_power += core.startup_power
-                        core.startup_count += 1
                     core.is_idle = False
                     core.total_power += core.power_rate * duration
                     core.timeline.append((process.start_time, process.pid, duration))
