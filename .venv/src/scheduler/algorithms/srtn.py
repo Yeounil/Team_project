@@ -18,6 +18,7 @@ class SRTN:
             # 현재 시간까지 도착한 프로세스 중 실행 가능한 것
             available = [p for p in ready_queue if p.arrival_time <= time and not p.executed and p.remaining_time > 0]
             assigned_pid = set()
+
             for i, core in enumerate(all_cores):
                 # 이전 프로세스 종료 확인
                 if running[i] and running[i].remaining_time <= 0:
@@ -55,12 +56,12 @@ class SRTN:
 
                 # Gantt 차트용 기록
                 core.timeline.append((time, next_proc.pid, exec_time))
-                # 전력 계산
-                core.total_power += core.power_rate * exec_time
-                if core.is_idle:
+                was_idle = [core.is_idle for core in all_cores]
+                if was_idle[i]:
                     core.total_power += core.startup_power
-                core.is_idle = False
 
+                core.total_power += core.power_rate * exec_time
+                core.is_idle = False
                 if next_proc.start_time is None:
                     next_proc.start_time = time
 
@@ -72,11 +73,5 @@ class SRTN:
                     next_proc.normalized_TT = round(next_proc.turn_around_time / next_proc.real_burst, 2)
                     next_proc.executed = True
                     running[i] = None
-
-
-            # 실행하지 못한 코어들은 유휴 상태로 전환
-            for i, core in enumerate(all_cores):
-                if running[i] is None and core.is_idle is False:
-                    core.is_idle = True
 
             time += 1
