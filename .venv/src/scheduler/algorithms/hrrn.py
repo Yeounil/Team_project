@@ -41,6 +41,10 @@ class HRRN:
             ready.sort(key=lambda p: p.rr, reverse=True)
 
             for core in cores:
+                if core.next_free_time < time:
+                    core.is_idle = True
+
+            for core in cores:
                 # 코어가 비어있는지 확인
                 if core.next_free_time <= time and ready:
                     proc = ready.pop(0)
