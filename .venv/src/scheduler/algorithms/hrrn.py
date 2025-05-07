@@ -1,5 +1,6 @@
 from scheduler.process import Process
 from scheduler.multicore.scheduler import Core
+import math
 
 class HRRN:
     def schedule(self, ready_queue, pcores, ecores):
@@ -13,6 +14,7 @@ class HRRN:
             p.waiting_time = None
             p.turn_around_time = None
             p.normalized_TT = None
+            p.real_burst = None
         # 코어 정보 초기화
         for core in cores:
             core.next_free_time = 0
@@ -46,11 +48,8 @@ class HRRN:
                     proc.start_time = time
                     proc.waiting_time = time - proc.arrival_time
 
-                    if core.core_type == 'P':
-                        burst = (proc.burst_time + 1) // 2
-                    else:
-                        burst = proc.burst_time
-                    finish = time + burst
+                    proc.real_burst = math.ceil(proc.burst_time / core.performance)
+                    finish = time + proc.real_burst
 
                     # 시동 전력
                     if core.is_idle:
@@ -58,14 +57,14 @@ class HRRN:
                         core.is_idle = False
 
                     # 실행 전력: 동작 시간만 측정함
-                    core.total_power += core.power_rate * burst
+                    core.total_power += core.power_rate * proc.real_burst
 
-                    core.timeline.append((time, proc.pid, burst))
+                    core.timeline.append((time, proc.pid, proc.real_burst))
                     core.next_free_time = finish
 
                     proc.finish_time = finish
                     proc.turn_around_time = finish - proc.arrival_time
-                    proc.normalized_TT = proc.turn_around_time / burst
+                    proc.normalized_TT = round(proc.turn_around_time / proc.real_burst, 2)
 
             # 다음 프로세스로 time 증가
             next_arr = min((p.arrival_time for p in ready_queue if not p.executed and p.arrival_time > time), default=float('inf'))
