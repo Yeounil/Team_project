@@ -77,7 +77,7 @@ class RoundRobin:
                 if core.is_idle:
                     core.total_power += core.startup_power
                     core.is_idle = False
-                core.total_power += core.power_rate * work
+                core.total_power += core.power_rate
 
                 if proc.remaining_time == 0 and proc.finish_time is None:
                     proc.finish_time = time + 1
