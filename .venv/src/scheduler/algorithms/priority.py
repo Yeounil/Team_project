@@ -22,8 +22,8 @@ class Priority:
                 continue
             avg_burst = sum(p.burst_time for p in available) / len(available)   # 평균 실행시간 계산
             # P/E 코어 할당 대상 분리
-            pcore_candidates = [p for p in available if p.burst_time > avg_burst]
-            ecore_candidates = [p for p in available if p.burst_time <= avg_burst]
+            pcore_candidates = [p for p in available if p.burst_time >= avg_burst]
+            ecore_candidates = [p for p in available if p.burst_time < avg_burst]
 
             # P-core 우선 할당
             for core in pcores:
