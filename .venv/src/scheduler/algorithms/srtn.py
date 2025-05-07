@@ -59,7 +59,6 @@ class SRTN:
                 core.total_power += core.power_rate * exec_time
                 if core.is_idle:
                     core.total_power += core.startup_power
-                    core.startup_count += 1
                 core.is_idle = False
 
                 if next_proc.start_time is None:
