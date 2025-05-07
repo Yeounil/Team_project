@@ -19,8 +19,8 @@ class Priority:
             avg_burst = sum(p.burst_time for p in available) / len(available)
 
             # 각 코어에 할당할 프로세스 분리
-            pcore_proc = [p for p in available if p.burst_time > avg_burst]
-            ecore_proc = [p for p in available if p.burst_time <= avg_burst]
+            pcore_proc = [p for p in available if p.burst_time >= avg_burst]
+            ecore_proc = [p for p in available if p.burst_time < avg_burst]
 
             # P-core에 우선하여 할당
             for core in pcores:
