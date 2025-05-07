@@ -55,7 +55,6 @@ class HRRN:
                     # 시동 전력
                     if core.is_idle:
                         core.total_power += core.startup_power
-                        core.startup_count += 1
                         core.is_idle = False
 
                     # 실행 전력: 동작 시간만 측정함
@@ -66,7 +65,7 @@ class HRRN:
 
                     proc.finish_time = finish
                     proc.turn_around_time = finish - proc.arrival_time
-                    proc.normalized_TT = proc.turn_around_time / proc.burst_time
+                    proc.normalized_TT = proc.turn_around_time / burst
 
             # 다음 프로세스로 time 증가
             next_arr = min((p.arrival_time for p in ready_queue if not p.executed and p.arrival_time > time), default=float('inf'))
