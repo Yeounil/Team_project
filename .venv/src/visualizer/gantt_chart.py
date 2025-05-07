@@ -14,11 +14,12 @@ def draw_gantt_chart(ax, core_info):
     ax.set_ylim(-1, len(core_info))
 
     for core_idx, (core_type, core_timeline) in enumerate(core_info):
-        color = 'red' if core_type == 'P' else 'blue'
+        color = '#FFB3B3' if core_type == 'P' else '#ADD8E6'
 
         for start, pid, duration in core_timeline:
             if duration <= 0:
                 continue
+
             ax.broken_barh([(start, duration)], (core_idx - 0.4, 0.8),
                            facecolors=f"C{pid % 10}")
             ax.text(start + duration / 2, core_idx, f"P{pid}",
@@ -32,7 +33,7 @@ def draw_gantt_chart(ax, core_info):
                          edgecolor='black', facecolor=color)
         ax.add_patch(rect)
         ax.text(label_rect_x + 2.25, core_idx, f"{core_type}-Core {core_idx}",
-                ha='center', va='center', color='white', fontsize=9, fontweight='bold')
+                ha='center', va='center', color='white', fontsize=13, fontweight='bold')
 
     ax.set_yticks([])
     ax.set_xlabel("Time")
