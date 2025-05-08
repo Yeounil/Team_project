@@ -19,7 +19,7 @@ def create_scheduler(name, quantum=None):
         return SRTN()
     elif name.lower() == "hrrn":
         return HRRN()
-    elif name.lower() == "priority":
-        return Priority()
+    elif name.lower() == "ljfc":
+        return LJFC()
     else:
         raise ValueError(f"알 수 없는 알고리즘 이름: {name}")
