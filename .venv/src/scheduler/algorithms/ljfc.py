@@ -2,7 +2,7 @@ from scheduler.process import Process
 from scheduler.multicore.scheduler import Core
 import math
 
-class Priority:
+class LJFC:
     def schedule(self, ready_queue, pcores, ecores):
         time = 0
 
