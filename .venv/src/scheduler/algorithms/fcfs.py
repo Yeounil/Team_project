@@ -8,9 +8,6 @@ class FCFS:
         cores = pcores + ecores
         ready_queue.sort(key=lambda p: p.arrival_time)
 
-        for process in ready_queue:
-            process.executed = False # 프로세스 실행여부 변수 초기화
-
         while not all(process.executed for process in ready_queue): # 프로세스가 모두 실행될 때 까지 반복복
 
             # 현재시각 기준으로 도착했으나 아직 실행되지 않은 프로세스 리스트
