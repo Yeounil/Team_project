@@ -6,19 +6,6 @@ class Priority:
     def schedule(self, ready_queue, pcores, ecores):
         time = 0
 
-        for p in ready_queue:
-            p.executed = False
-            p.start_time = None
-            p.finish_time = None
-            p.waiting_time = None
-            p.turn_around_time = None
-            p.normalized_TT = None
-
-        for core in pcores + ecores:
-            core.next_free_time = 0
-            core.is_idle = True
-            core.total_power = 0.0
-
         while not all(p.executed for p in ready_queue):
             # 현재까지 도착한 미실행 프로세스
             available = [p for p in ready_queue if p.arrival_time <= time and not p.executed]
@@ -49,7 +36,7 @@ class Priority:
 
             # E-core 우선 할당
             for core in ecores:
-              if core.next_free_time <= time and ecore_proc:
+                if core.next_free_time <= time and ecore_proc:
                     proc = ecore_proc.pop(0)
                     self._assign(core, proc, time)
                     proc.executed = True
