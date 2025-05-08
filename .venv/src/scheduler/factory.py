@@ -3,7 +3,7 @@ from scheduler.algorithms.rr import RoundRobin
 from scheduler.algorithms.spn import SPN
 from scheduler.algorithms.srtn import SRTN
 from scheduler.algorithms.hrrn import HRRN
-from scheduler.algorithms.priority import Priority
+from scheduler.algorithms.ljfc import LJFC
 
 
 def create_scheduler(name, quantum=None):
