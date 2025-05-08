@@ -5,13 +5,6 @@ class SRTN:
         time = 0  # 현재 시뮬레이션 시간 초기화
         all_cores = pcores + ecores  # 모든 코어를 하나로 통합
 
-        # ── 프로세스 상태 초기화 ──
-        for p in ready_queue:
-            p.remaining_time = p.burst_time  # 남은 시간 = 초기 burst 시간
-            p.executed = False               # 아직 완료되지 않음
-            p.start_time = None              # 시작 시간 초기화
-            p.finish_time = None             # 종료 시간 초기화
-
         running = [None] * len(all_cores)  # 각 코어에서 실행 중인 프로세스 저장용
 
         # ── 모든 프로세스가 완료될 때까지 반복 ──
