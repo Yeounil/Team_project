@@ -6,19 +6,6 @@ class HRRN:
     def schedule(self, ready_queue, pcores, ecores):
         cores = pcores + ecores
         time  = 0
-        # 프로세스 정보 초기화
-        for p in ready_queue:
-            p.executed = False
-            p.start_time = None
-            p.finish_time = None
-            p.waiting_time = None
-            p.turn_around_time = None
-            p.normalized_TT = None
-            p.real_burst = None
-        # 코어 정보 초기화
-        for core in cores:
-            core.next_free_time = 0
-            core.is_idle = True
 
         # 아직 실행되지 않은 모든 프로세스가 실행될 때까지 반복함
         while not all(p.executed for p in ready_queue):
