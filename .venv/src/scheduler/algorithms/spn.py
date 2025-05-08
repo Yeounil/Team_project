@@ -28,8 +28,8 @@ class SPN:
                     process.finish_time = core.next_free_time # 프로세스 정보에 일이 끝나는 시간 정의
 
                     if core.is_idle:
-                       core.total_power += core.startup_power
-                       core.is_idle = False
+                        core.total_power += core.startup_power
+                        core.is_idle = False
                     # 전력 계산
                     core.total_power += process.real_burst * core.power_rate
                     process.waiting_time = process.start_time - process.arrival_time
