@@ -34,7 +34,7 @@ class SchedulerUI(QWidget):
         input_layout.addWidget(self.core_label)
         #스케줄링 선택 combobox 생성
         self.algo_choice = self._create_labeled_combobox("스케줄링 알고리즘:", input_layout,
-                                                        ["FCFS", "HRRN", "Priority", "RR", "SPN", "SRTN"])
+                                                        ["FCFS", "HRRN", "RR", "SPN", "SRTN", "LJFC"])
         self.quantum_input = self._create_labeled_spinbox("Round Robin Quantum (RR 선택 시):", input_layout, 1, 100)
         #프로세스 기본 정보 입력 테이블 생성
         self.table = QTableWidget(0, 3)
