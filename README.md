@@ -1,1 +1,1 @@
-![초기 구조](https://github.com/user-attachments/assets/66aed14e-320a-4f18-bc44-7e99fcd215bf)
+![프로그램 최종 구조](https://github.com/user-attachments/assets/5efa69ec-13c2-4918-8bf0-389e6ca44450)
